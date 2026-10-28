@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>스피드 불교 퀴즈</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+img{max-width:100%}
+/* Layout: one-screen game. A dancheong stripe crowns the page; a single centered stage column swaps scenes by game phase; effects play on a fixed overlay. */
+:root{
+  --ink:#15132b; --surface:#1f1c3d; --raise:#2b2752; --line:#3b3668;
+  --paper:#f4ecda; --mute:#aca6ca;
+  --red:#d64a3e; --green:#2e9c7c; --blue:#3f6fd0; --gold:#e4b44c;
+  --ok:#4cc58f; --bad:#e8604f; --sky:#5fb6e8;
+  --display:'Black Han Sans','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--ink);color:var(--paper);font-family:var(--body);font-size:16px;margin:0;overflow-x:hidden;transition:background .6s}
+body.mal{background:#07060f}
+.stripe{height:10px;background:repeating-linear-gradient(90deg,var(--red) 0 22px,var(--green) 22px 34px,var(--gold) 34px 40px,var(--blue) 40px 62px,var(--green) 62px 74px,var(--gold) 74px 80px)}
+#sky{position:fixed;inset:0;z-index:0;pointer-events:none}
+.stripe,.wrap{position:relative;z-index:1}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 40px;display:flex;flex-direction:column;gap:18px}
+h1,h2,.disp{font-family:var(--display);font-weight:400;letter-spacing:.01em;text-wrap:balance;margin:0}
+h1{font-size:clamp(34px,8vw,56px);line-height:1.05}
+h2{font-size:clamp(24px,5.5vw,34px);line-height:1.15}
+.eyebrow{font-size:13px;letter-spacing:.12em;color:var(--gold)}
+.mute{color:var(--mute)}
+.num{font-variant-numeric:tabular-nums}
+p{margin:0;line-height:1.6}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.btn{background:var(--gold);color:#22180a;font-family:var(--display);font-size:20px;padding:14px 22px;border-radius:12px}
+.btn.ghost{background:transparent;color:var(--paper);border:1.5px solid var(--line);font-family:var(--body);font-size:15px;padding:10px 14px}
+.btn:disabled{opacity:.45;cursor:default}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px}
+input[type=text]{font:inherit;font-size:20px;background:var(--raise);color:var(--paper);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;width:100%;box-sizing:border-box}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--raise);border-radius:999px;padding:6px 12px;font-size:15px}
+.chip.me{background:var(--gold);color:#22180a}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.qno{font-family:var(--display);font-size:20px;color:var(--gold)}
+.timer{height:10px;background:var(--raise);border-radius:999px;overflow:hidden}
+.timer i{display:block;height:100%;background:var(--gold);width:100%;transform-origin:left}
+.qtext{font-family:var(--display);font-size:clamp(24px,6vw,40px);line-height:1.25;text-wrap:balance}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:520px){.opts{grid-template-columns:1fr}}
+.opt{position:relative;border-radius:14px;padding:18px 16px;font-size:20px;text-align:left;display:flex;gap:12px;align-items:center;min-height:68px;color:#fff;transition:transform .12s,opacity .2s}
+.opt b{font-family:var(--display);font-weight:400;font-size:22px;width:30px;height:30px;border-radius:8px;background:rgba(0,0,0,.25);display:grid;place-items:center;flex:none}
+.opt:active{transform:scale(.97)}
+.o0{background:var(--red)} .o1{background:var(--blue)} .o2{background:var(--green)} .o3{background:var(--gold);color:#22180a}
+.opt.dim{opacity:.35}
+.opt.pick{outline:4px solid var(--paper);outline-offset:3px}
+.opt.right{outline:4px solid var(--ok);outline-offset:3px;opacity:1}
+.opt.veil::after{content:"번뇌 연기";position:absolute;inset:0;border-radius:14px;background:radial-gradient(circle at 30% 40%,#8d8a99,#55525f 70%);display:grid;place-items:center;color:#eee;font-size:16px;animation:smoke 3s ease-out forwards}
+@keyframes smoke{0%{opacity:0;filter:blur(8px)}12%{opacity:1;filter:blur(0)}85%{opacity:1}100%{opacity:0}}
+.note{border-radius:12px;padding:10px 14px;font-size:15px;background:var(--raise)}
+.note.red{background:color-mix(in srgb,var(--red) 30%,var(--surface))}
+.note.sky{background:color-mix(in srgb,var(--sky) 25%,var(--surface))}
+.note.gold{background:color-mix(in srgb,var(--gold) 25%,var(--surface))}
+.note.storm{background:color-mix(in srgb,#9b6cff 28%,var(--surface))}
+.big{font-family:var(--display);font-size:clamp(60px,18vw,120px);line-height:1;color:var(--gold)}
+.items{display:flex;gap:10px;flex-wrap:wrap}
+.item{display:flex;align-items:center;gap:8px;background:var(--raise);border:1.5px solid var(--line);border-radius:12px;padding:10px 14px;font-size:16px}
+.item i{font-style:normal;font-family:var(--display);width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:#22180a}
+.item.T i{background:#b07a43;color:#fff} .item.S i{background:#7d7a8c;color:#fff}
+.item.on{border-color:var(--gold)}
+.board{display:flex;flex-direction:column;gap:6px}
+.brow{display:grid;grid-template-columns:34px 1fr auto auto;gap:10px;align-items:center;background:var(--surface);border-radius:10px;padding:9px 12px}
+.brow.me{outline:2px solid var(--gold)}
+.brow .rk{font-family:var(--display);color:var(--gold);font-size:18px}
+.brow .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.d{font-size:14px} .d.up{color:var(--ok)} .d.no{color:var(--mute)}
+.tag{font-size:12px;padding:2px 7px;border-radius:6px;background:var(--raise);color:var(--mute);margin-left:6px}
+.podium{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:end;text-align:center}
+.pod{background:var(--surface);border-radius:14px 14px 4px 4px;padding:14px 8px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.pod .t{font-family:var(--display);font-size:22px;color:var(--gold)}
+.pod.p1{padding-block:30px;background:color-mix(in srgb,var(--gold) 22%,var(--surface))}
+.title-big{font-family:var(--display);font-size:clamp(56px,16vw,100px);color:var(--gold);line-height:1}
+.hostbar{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.result{font-family:var(--display);font-size:clamp(40px,12vw,72px);line-height:1}
+.result.ok{color:var(--ok)} .result.bad{color:var(--bad)}
+/* effects */
+#fx{position:fixed;inset:0;pointer-events:none;z-index:50;overflow:hidden}
+.flash{position:absolute;inset:0;animation:flash .9s ease-out forwards}
+@keyframes flash{0%{opacity:.85}100%{opacity:0}}
+.banner{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;background:rgba(10,8,24,.72);animation:bannerBg 2.2s ease forwards}
+.banner div{display:flex;flex-direction:column;gap:12px;align-items:center;animation:slam .55s cubic-bezier(.2,1.6,.4,1) both}
+.banner .bt{font-family:var(--display);font-size:clamp(48px,13vw,110px);line-height:1;text-shadow:0 4px 0 rgba(0,0,0,.4)}
+.banner .bd{font-size:clamp(17px,4vw,24px);max-width:24ch}
+@keyframes slam{0%{transform:scale(2.6);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes bannerBg{0%,80%{opacity:1}100%{opacity:0}}
+.ev-gold .bt{color:var(--gold)} .ev-red .bt{color:#ff6a5c} .ev-dark .bt{color:#c9b7ff} .ev-sky .bt{color:var(--sky)} .ev-lotus .bt{color:#ff9fc4} .ev-storm .bt{color:#d7c2ff}
+.shake{animation:shake .45s linear 0s var(--n,2)}
+@keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-10px,4px) rotate(-1deg)}40%{transform:translate(9px,-5px) rotate(1deg)}60%{transform:translate(-7px,-3px)}80%{transform:translate(6px,5px)}}
+.petal{position:absolute;top:-30px;width:18px;height:12px;border-radius:12px 0 12px 0;background:#ff9fc4;animation:fall linear forwards;opacity:.9}
+@keyframes fall{to{transform:translate(var(--dx),110vh) rotate(720deg)}}
+.spark{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 12px var(--gold);animation:spark 1.2s ease-out forwards}
+@keyframes spark{0%{transform:scale(0)}40%{transform:scale(1.4)}100%{transform:scale(0) translateY(-40px);opacity:0}}
+.bolt{position:absolute;inset:0;background:#e8dcff;animation:bolt .9s steps(1) forwards}
+@keyframes bolt{0%{opacity:.9}10%{opacity:0}20%{opacity:.7}30%{opacity:0}45%{opacity:.5}55%,100%{opacity:0}}
+.toast{position:absolute;left:50%;top:calc(18px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--paper);color:var(--ink);padding:12px 18px;border-radius:12px;font-size:17px;max-width:calc(100% - 32px);box-sizing:border-box;animation:toast 3s ease forwards;text-align:center}
+@keyframes toast{0%{transform:translate(-50%,-30px);opacity:0}10%,85%{transform:translate(-50%,0);opacity:1}100%{opacity:0}}
+.tok{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-family:var(--display);font-size:clamp(70px,20vw,140px);color:#e7b77a;text-shadow:0 6px 0 #6b4320;animation:slam .4s cubic-bezier(.2,1.6,.4,1) both,fadeOut 1.4s .6s forwards}
+@keyframes fadeOut{to{opacity:0}}
+.glow{position:absolute;inset:0;box-shadow:inset 0 0 120px 40px rgba(228,180,76,.55);animation:fadeOut 2.5s ease forwards}
+.okflash{background:var(--ok)} .badflash{background:var(--bad)} .redflash{background:var(--red)} .skyflash{background:var(--sky)} .goldflash{background:var(--gold)}
+/* ---- v2: tablet layout + motion ---- */
+.panel{backdrop-filter:blur(6px);background:color-mix(in srgb,var(--surface) 88%,transparent)}
+.narrow{max-width:760px;width:100%;margin-inline:auto;display:flex;flex-direction:column;gap:18px}
+.qgrid{display:flex;flex-direction:column;gap:18px}
+.qside{display:flex;flex-direction:column;gap:14px;min-width:0}
+.opt{box-shadow:0 6px 0 rgba(0,0,0,.35);transition:transform .12s,box-shadow .12s,opacity .25s,filter .25s}
+.opt:hover{filter:brightness(1.08)}
+.opt:active{transform:translateY(4px) scale(.98);box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.opt.pick{animation:pickPop .35s cubic-bezier(.2,1.8,.4,1)}
+@keyframes pickPop{0%{transform:scale(.9)}100%{transform:scale(1)}}
+.opt.right{animation:rightPulse 1s ease-in-out infinite alternate}
+@keyframes rightPulse{to{box-shadow:0 0 0 6px color-mix(in srgb,var(--ok) 45%,transparent),0 6px 0 rgba(0,0,0,.35)}}
+.opt.dim{filter:grayscale(.6)}
+@media (min-width:900px){
+  .wrap{gap:22px}
+  .qgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:28px;align-items:center}
+  .qgrid .opts{grid-template-columns:1fr 1fr}
+  .opt{min-height:120px;font-size:26px;padding:22px}
+  .opt b{width:40px;height:40px;font-size:28px}
+  .qtext{font-size:clamp(34px,3.6vw,52px)}
+  .board.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .brow{padding:12px 16px;font-size:18px}
+  .big{font-size:160px}
+  .item{padding:14px 18px;font-size:18px}
+  .chip{font-size:18px;padding:8px 16px}
+}
+@media (min-width:600px) and (max-width:899px){ .opt{min-height:92px;font-size:23px} }
+/* timer */
+.timer{height:14px;position:relative}
+.timer i{transition:background .3s}
+.timer.hurry i{background:var(--bad)}
+.timer.hurry{animation:jitter .12s linear infinite}
+#sec{font-family:var(--display);font-size:24px;color:var(--paper);display:inline-block}
+#sec.hurry{color:var(--bad);animation:jitter .1s linear infinite;font-size:32px}
+@keyframes jitter{0%{transform:translate(0,0)}25%{transform:translate(-2px,1px)}50%{transform:translate(2px,-1px)}75%{transform:translate(-1px,-2px)}100%{transform:translate(1px,2px)}}
+.big.beat{animation:beat .5s cubic-bezier(.2,1.8,.4,1)}
+.big.hurry{color:var(--bad)}
+@keyframes beat{0%{transform:scale(1.5)}100%{transform:scale(1)}}
+body.panic::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:40;box-shadow:inset 0 0 90px 10px color-mix(in srgb,var(--bad) 55%,transparent);animation:panic .5s ease-in-out infinite alternate}
+@keyframes panic{from{opacity:.3}to{opacity:1}}
+/* entrance (only right after a phase change) */
+.anim .qtext{animation:rise .5s cubic-bezier(.2,1.2,.4,1) both}
+.anim .opt{animation:popIn .45s cubic-bezier(.2,1.7,.4,1) both}
+.anim .opt:nth-child(1){animation-delay:.15s}.anim .opt:nth-child(2){animation-delay:.25s}.anim .opt:nth-child(3){animation-delay:.35s}.anim .opt:nth-child(4){animation-delay:.45s}
+.anim .brow{animation:slideIn .4s ease both}
+.anim .brow:nth-child(2){animation-delay:.05s}.anim .brow:nth-child(3){animation-delay:.1s}.anim .brow:nth-child(4){animation-delay:.15s}.anim .brow:nth-child(5){animation-delay:.2s}.anim .brow:nth-child(n+6){animation-delay:.25s}
+.anim .result{animation:stamp .5s cubic-bezier(.2,1.8,.4,1) both}
+.anim .title-big{animation:stamp .9s .3s cubic-bezier(.2,1.6,.4,1) both}
+.anim .pod{animation:rise .6s cubic-bezier(.2,1.3,.4,1) both}.anim .pod.p1{animation-delay:.5s}.anim .pod.p3{animation-delay:.15s}
+.anim .panel{animation:fadeUp .35s ease both}
+@keyframes rise{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+@keyframes popIn{from{transform:scale(.6) translateY(20px);opacity:0}to{transform:none;opacity:1}}
+@keyframes slideIn{from{transform:translateX(-24px);opacity:0}to{transform:none;opacity:1}}
+@keyframes stamp{0%{transform:scale(3) rotate(-8deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes fadeUp{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+.chip.new{animation:popIn .4s cubic-bezier(.2,1.7,.4,1) both}
+.mv{font-size:13px;margin-left:6px}.mv.u{color:var(--ok)}.mv.dn{color:var(--bad)}
+.streak{font-family:var(--display);color:#ff9a3c;font-size:18px;animation:flicker .6s ease-in-out infinite alternate}
+@keyframes flicker{from{text-shadow:0 0 6px #ff7a1a}to{text-shadow:0 0 16px #ffb347;transform:scale(1.06)}}
+.ripple{position:absolute;width:30px;height:30px;border-radius:50%;border:4px solid var(--paper);transform:translate(-50%,-50%);animation:ripple .6s ease-out forwards}
+@keyframes ripple{to{width:260px;height:260px;opacity:0}}
+.stampOk{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-10deg);font-family:var(--display);font-size:clamp(50px,14vw,110px);color:var(--paper);border:6px solid var(--paper);border-radius:16px;padding:6px 20px;animation:stampIn .35s cubic-bezier(.2,1.8,.4,1) both,fadeOut .6s .7s forwards}
+@keyframes stampIn{from{transform:translate(-50%,-50%) rotate(-10deg) scale(2.5);opacity:0}}
+@media (prefers-reduced-motion:reduce){
+  .anim *,.timer.hurry,#sec.hurry,body.panic::after,.streak,.opt.right{animation:none!important}
+  #sky{display:none}
+  .shake{animation:none} .petal,.spark{display:none} .banner div{animation:none} .bolt,.flash{animation-duration:.01s}
+}
+</style>
+</head>
+<body>
+
+
+<canvas id="sky" aria-hidden="true"></canvas>
+<div class="stripe" aria-hidden="true"></div>
+<main class="wrap" id="stage">
+  <section id="join" hidden>
+    <div class="panel">
+      <span class="eyebrow">스피드 불교 퀴즈</span>
+      <h1>방 코드와 이름을 적고 입장하세요</h1>
+      <p class="mute">방 코드는 교실 화면에 크게 떠 있어요. 이름은 8글자까지, 다시 들어올 때 같은 이름을 쓰면 점수가 이어져요.</p>
+      <form id="joinForm" style="display:flex;flex-direction:column;gap:10px">
+        <input type="text" id="codeInput" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="방 코드 (예: K7QF)" style="letter-spacing:.2em;text-transform:uppercase">
+        <input type="text" id="nameInput" maxlength="8" autocomplete="off" placeholder="이름 (예: 김민준)">
+        <button class="btn" type="submit" id="joinBtn">입장</button>
+      </form>
+      <p id="joinErr" class="mute" role="alert"></p>
+    </div>
+    <div class="panel">
+      <span class="eyebrow">방장이라면</span>
+      <div class="row"><button class="btn ghost" type="button" data-p="host">방 만들기 (교실 화면용)</button><button class="btn ghost" type="button" data-p="practice">혼자 모의전 (봇 5명과 대결)</button></div>
+    </div>
+  </section>
+  <section id="app"></section>
+</main>
+<div id="fx" aria-hidden="true"></div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const QT=8000, WAIT=8000, INTRO=2200, REV=5000, NQ=15;
+const BANK=[ // a: 정답 위치. 판마다 보기 순서는 섞여서 나와요
+ {t:"석가모니가 출가한 나이는?",o:["29세","19세","35세","40세"],a:0},
+ {t:"석가모니가 모든 것을 버리고 출가한 계기는?",o:["왕궁 밖에서 생로병사의 고통을 봐서","전쟁에서 져서","왕위를 빼앗겨서","스승이 시켜서"],a:0},
+ {t:"석가모니가 깨달음을 얻기 전 고행한 기간은?",o:["6년","3년","10년","1년"],a:0},
+ {t:"석가모니가 수행하여 부처가 된 곳은 어느 나무 아래?",o:["보리수","소나무","은행나무","대나무"],a:0},
+ {t:"'부처'라는 말의 뜻은?",o:["진리를 깨달은 자","왕의 아들","절을 지은 사람","가장 오래 산 사람"],a:0},
+ {t:"석가모니가 두 극단을 피해 깨달은 길은?",o:["중도","고행","쾌락","윤회"],a:0},
+ {t:"욕망이 이끄는 대로 사는 첫 번째 극단은?",o:["쾌락주의","고행주의","중도","무아"],a:0},
+ {t:"몸을 괴롭혀 욕망을 억누르려 한 두 번째 극단은?",o:["고행주의","쾌락주의","열반","정념"],a:0},
+ {t:"석가모니가 왕자 시절에 누렸던 삶은 어떤 극단일까?",o:["쾌락주의","고행주의","중도","무아"],a:0},
+ {t:"고행주의의 한계로 맞는 것은?",o:["몸만 지치게 하고 참된 지혜를 주지 못했다","늙음과 죽음을 없애 주었다","즐거움이 너무 많았다","돈이 너무 많이 들었다"],a:0},
+ {t:"쾌락주의가 해결해 주지 못한 것은?",o:["늙음·죽음이라는 근본적인 괴로움","순간의 즐거움","배고픔","심심함"],a:0},
+ {t:"불교에서 중도를 삶에서 실현하는 방법은?",o:["팔정도","사성제","윤회","삼보"],a:0},
+ {t:"죽음과 탄생이 계속 반복된다는 불교 사상은?",o:["윤회","열반","중도","무아"],a:0},
+ {t:"불교에서 다음 생을 정하는 것은?",o:["업과 그 인과 관계","신의 뜻","태어난 날짜","부모의 재산"],a:0},
+ {t:"업(카르마)에 대한 설명으로 맞는 것은?",o:["의도가 담긴 생각·말·행동","태어날 때 정해진 운명","절에 내는 돈","스님이 입는 옷"],a:0},
+ {t:"불교의 윤회에서 다음 생으로 그대로 옮겨 간다고 보지 않는 것은?",o:["변하지 않는 영혼이나 자아","원인과 결과의 관계","업의 영향","이전 삶과의 연결"],a:0},
+ {t:"윤회가 괴로움과 연결되는 이유는?",o:["다시 태어나 또 늙고 죽기를 반복해서","다음 생엔 부자가 되어서","기억이 그대로 남아서","신이 벌을 주어서"],a:0},
+ {t:"'영원하고 변하지 않는 자아는 없다'는 가르침은?",o:["무아","중도","업","열반"],a:0},
+ {t:"무아에 대한 설명으로 틀린 것은?",o:["나 자신이 완전히 사라진다는 뜻이다","변하지 않는 자아는 없다","변하는 것을 붙잡으면 집착이 생긴다","독립적인 영원한 자아를 부정한다"],a:0},
+ {t:"한 촛불로 다른 촛불에 불을 붙이는 비유가 설명하는 것은?",o:["윤회는 원인과 결과가 이어지는 것","영혼이 그대로 옮겨 간다","불은 위험하다","촛불은 오래 탄다"],a:0},
+ {t:"'모든 것은 마음이 앞서고, 마음이 이끈다'는 구절이 나오는 경전은?",o:["법구경","초전법륜경","반야심경","금강경"],a:0},
+ {t:"발표에서 말한 괴로움이 생기는 두 가지 원인은?",o:["무지와 집착","가난과 질병","날씨와 운","신과 악마"],a:0},
+ {t:"모든 것이 변한다는 사실을 제대로 이해하지 못하는 것은?",o:["무지","집착","정견","열반"],a:0},
+ {t:"원하는 상태를 유지하려고 지나치게 붙잡는 마음은?",o:["집착","무지","정념","중도"],a:0},
+ {t:"괴로움에서 벗어나는 원리를 담은 네 가지 진리는?",o:["사성제","팔정도","삼법인","삼보"],a:0},
+ {t:"사성제 중 '괴로움의 진리'는?",o:["고성제","집성제","멸성제","도성제"],a:0},
+ {t:"사성제 중 '괴로움의 원인'에 관한 진리는?",o:["집성제","고성제","멸성제","도성제"],a:0},
+ {t:"사성제 중 '괴로움의 제거'에 관한 진리는?",o:["멸성제","고성제","집성제","도성제"],a:0},
+ {t:"사성제 중 '괴로움의 소멸에 이르는 길'에 관한 진리는?",o:["도성제","고성제","집성제","멸성제"],a:0},
+ {t:"고성제에 대한 설명으로 맞는 것은?",o:["삶에는 다양한 괴로움이 존재한다","괴로움은 영원하다","괴로움은 신이 만든다","괴로움은 없다"],a:0},
+ {t:"도성제에서 괴로움을 없애는 구체적인 방법으로 제시하는 것은?",o:["팔정도","고행","기도","윤회"],a:0},
+ {t:"멸성제에서 괴로움이 완전히 사라진 상태와 연결하는 것은?",o:["열반","윤회","업","고행"],a:0},
+ {t:"팔정도는 모두 몇 가지 바른 길일까?",o:["8가지","4가지","6가지","10가지"],a:0},
+ {t:"팔정도에 포함되지 않는 것은?",o:["정복","정견","정어","정업"],a:0},
+ {t:"'세상의 이치와 진리를 바르게 이해하기'는 팔정도 중 무엇?",o:["정견","정사유","정념","정정"],a:0},
+ {t:"'바른 마음과 생각을 갖기'는 팔정도 중 무엇?",o:["정사유","정견","정정","정업"],a:0},
+ {t:"'거짓말이나 남을 해치는 말을 삼가기'는 팔정도 중 무엇?",o:["정어","정업","정명","정견"],a:0},
+ {t:"'해로운 행동을 삼가고 바른 행동을 실천하기'는 팔정도 중 무엇?",o:["정업","정어","정명","정정진"],a:0},
+ {t:"'남에게 해 끼치지 않는 정당한 방법으로 생계를 유지하기'는?",o:["정명","정업","정사유","정념"],a:0},
+ {t:"'선한 마음과 행동을 위해 계속 노력하기'는 팔정도 중 무엇?",o:["정정진","정정","정념","정견"],a:0},
+ {t:"'내 몸과 감정, 생각이 어떤 상태인지 알아차리기'는?",o:["정념","정정","정사유","정어"],a:0},
+ {t:"'마음을 한곳에 모으고 산만함에서 벗어나기'는 팔정도 중 무엇?",o:["정정","정념","정정진","정명"],a:0},
+ {t:"'여래가 깨달은 중도는 곧 성스러운 팔정도'라는 내용이 나오는 경전은?",o:["초전법륜경","법구경","반야심경","화엄경"],a:0},
+ {t:"열반이란 무엇일까?",o:["괴로움의 원인이 소멸한 상태","죽은 뒤에 가는 천국","아주 신나는 기분","다시 태어나는 것"],a:0},
+ {t:"열반에서 소멸하는 번뇌가 아닌 것은?",o:["지혜","탐욕","성냄","어리석음"],a:0},
+ {t:"열반에 대한 설명으로 틀린 것은?",o:["행복하고 편안한 기분만을 뜻한다","번뇌가 소멸한 상태다","갈망과 집착에서 벗어나는 것이다","마음의 평화를 얻는 것이다"],a:0},
+ {t:"발표에서 말한 열반에 이르는 방법은?",o:["집착을 내려놓고 팔정도를 실천한다","6년 동안 고행한다","원하는 것을 다 가진다","윤회를 계속 반복한다"],a:0},
+ {t:"발표의 결론: 인간이 괴로움을 겪는 까닭은?",o:["변화를 이해하지 못하고 갈망·집착해서","신이 벌을 내려서","운이 나빠서","다른 사람 때문에"],a:0},
+ {t:"불교가 깨달음을 얻기 위해 강조하는 두 가지는?",o:["지혜와 수행","돈과 권력","운과 재능","기도와 제물"],a:0}
+];
+let Q=[], lastQs='';
+function buildQ(qs,pm){ Q=qs.map((id,i)=>{ const b=BANK[id]; const p=String(pm[i]||'0123').split('').map(Number); return {t:b.t,o:p.map(j=>b.o[j]),a:p.indexOf(b.a)} }) }
+function newSet(){
+  let used=[]; try{ used=JSON.parse(lsGet('bq-used')||'[]').filter(i=>i>=0&&i<BANK.length) }catch(e){}
+  let pool=BANK.map((_,i)=>i).filter(i=>!used.includes(i)); if(pool.length<NQ){ used=[]; pool=BANK.map((_,i)=>i) }
+  const qs=shuffleArr(pool).slice(0,NQ); lsSet('bq-used',JSON.stringify(used.concat(qs)));
+  const pm=qs.map(()=>shuffleArr([0,1,2,3]).join(''));
+  buildQ(qs,pm); lastQs=qs.join(','); return {qs,pm};
+}
+const EV={2:'sari',4:'raid',6:'malbeop',8:'doban',10:'gongyang',12:'mara',14:'final'};
+const EVI={
+ sari:{n:'사리 문제',d:'맞히면 아이템 2개',c:'gold'},
+ raid:{n:'번뇌의 습격',d:'지금 1등의 보기가 뒤섞인다',c:'red'},
+ malbeop:{n:'말법시대',d:'맞히면 +20%, 틀리면 −20% · 반 평균 점수 기준',c:'dark'},
+ doban:{n:'도반 문제',d:'짝이 모두 맞혀야 점수를 받는다',c:'sky'},
+ gongyang:{n:'공양 시간',d:'하위 3명에게 아이템을 공양한다',c:'lotus'},
+ mara:{n:'마구니 강림',d:'',c:'storm'},
+ final:{n:'마지막 문제',d:'점수 2배',c:'gold'}
+};
+const ITEM={T:{n:'목탁',g:'탁',d:'상대 화면 3초 흔들기'},S:{n:'번뇌 연기',g:'연',d:'상대 보기 2개 3초 가리기'},M:{n:'자비',g:'비',d:'다음 실수 한 번 막기'}};
+const LET=['가','나','다','라'];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clean=s=>String(s||'').replace(new RegExp('[\\u0000-\\u001f\\u200b-\\u200f\\u2028-\\u202e\\u2060-\\u206f\\ufeff]','g'),'').replace(/\s+/g,' ').trim().slice(0,8);
+const rand=n=>Math.floor(Math.random()*n);
+const shuffleArr=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=rand(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+
+let room=null, isHost=false, myName=null, hasRoom=false;
+let peer=null, conn=null, conns=new Map(), pmap=new Map(), roomCode='', netStatus='', retryT=null, dupFlag=false, hostErr='';
+const schedule=(f,ms)=>{ clearTimeout(retryT); retryT=setTimeout(f,ms) };
+let S={phase:'lobby',q:-1}, B={p:[]}, deadline=0, lastKey='';
+let myUse=null, picking=false, myAns=null, smokeUntil=0, hideIdx=[];
+let practice=false, localPres={};
+function pres(p){ Object.assign(localPres,p); if(practice) return; sendP() }
+function sendP(){ try{ if(conn&&conn.open) conn.send({t:'p',p:localPres}) }catch(e){} }
+let animateNext=true, rankBefore={}, seenNames=new Set(), lastSec=-1;
+
+/* ---------- shared helpers ---------- */
+function ranked(rows){ // rows: [name,score,...] sorted desc -> add rank
+  const out=[]; let prev=null, rk=0;
+  rows.forEach((r,i)=>{ if(r[1]!==prev){rk=i+1;prev=r[1]} out.push({name:r[0],score:r[1],streak:r[2],inv:r[3]||'',delta:r[4]||0,ok:r[5],mercy:r[6],rank:rk}); });
+  return out;
+}
+function titleFor(r,list){
+  const n=list.length, last=list[n-1]?list[n-1].rank:1;
+  if(r.rank===1) return '부처';
+  if(n>=3 && r.rank===last) return '아귀';
+  if(r.rank<=Math.max(1,Math.ceil(n*.25))) return '천상';
+  if(r.rank>Math.floor(n*.75)) return '축생';
+  return '인간';
+}
+const TSUB={'부처':'해탈에 이르렀다','천상':'하늘 세계에 태어난다','인간':'다시 사람으로 태어난다','축생':'동물로 태어난다','아귀':'배고픈 귀신이 되었다… 다음 판에 해탈하자'};
+function myRow(){ return ranked(B.p).find(r=>r.name===myName) }
+function secLeft(){ return Math.max(0,Math.ceil((deadline-Date.now())/1000)) }
+
+/* ---------- audio ---------- */
+let ac=null;
+function audio(){ try{ ac=ac||new (window.AudioContext||window.webkitAudioContext)(); if(ac.state==='suspended') ac.resume(); }catch(e){} return ac }
+function tok(freq=820,dur=.12,vol=.5){ const a=audio(); if(!a) return; try{ const o=a.createOscillator(),g=a.createGain(); o.type='sine'; o.frequency.setValueAtTime(freq,a.currentTime); o.frequency.exponentialRampToValueAtTime(freq*.55,a.currentTime+dur); g.gain.setValueAtTime(vol,a.currentTime); g.gain.exponentialRampToValueAtTime(.001,a.currentTime+dur); o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime+dur+.02);}catch(e){} }
+function boom(){ tok(120,.6,.6); setTimeout(()=>tok(90,.5,.4),120) }
+
+/* ---------- effects ---------- */
+const FX=()=>$('#fx');
+function addFx(el,ms){ FX().appendChild(el); setTimeout(()=>el.remove(),ms) }
+function flash(cls){ const d=document.createElement('div'); d.className='flash '+cls; addFx(d,1000) }
+function shake(times=2){ const s=$('#stage'); s.classList.remove('shake'); void s.offsetWidth; s.style.setProperty('--n',times); s.classList.add('shake'); setTimeout(()=>s.classList.remove('shake'),times*450+50) }
+function toast(t){ const d=document.createElement('div'); d.className='toast'; d.textContent=t; addFx(d,3100) }
+function petals(n=40){ for(let i=0;i<n;i++){ const p=document.createElement('div'); p.className='petal'; p.style.left=Math.random()*100+'%'; p.style.setProperty('--dx',(Math.random()*160-80)+'px'); p.style.animationDuration=(2.2+Math.random()*2)+'s'; p.style.animationDelay=(Math.random()*.8)+'s'; if(i%3===0) p.style.background='#ffd2e4'; if(i%5===0) p.style.background='var(--gold)'; addFx(p,5200) } }
+function sparks(n=30){ for(let i=0;i<n;i++){ const s=document.createElement('div'); s.className='spark'; s.style.left=Math.random()*100+'%'; s.style.top=Math.random()*100+'%'; s.style.animationDelay=(Math.random()*.9)+'s'; addFx(s,2300) } }
+function bolt(){ const b=document.createElement('div'); b.className='bolt'; addFx(b,1000) }
+function banner(ev,extra){ const i=EVI[ev]; const b=document.createElement('div'); b.className='banner ev-'+i.c; b.innerHTML=`<div><span class="eyebrow">이벤트 발동</span><span class="bt">${esc(i.n)}</span><span class="bd">${esc(extra||i.d)}</span></div>`; addFx(b,2300) }
+function eventFx(ev){
+  let extra='';
+  if(ev==='mara') extra=S.mara?`마구니로 지목된 사람: ${S.mara}`:'';
+  if(ev==='doban'&&myName&&S.pairs){ const g=S.pairs.find(g=>g.includes(myName)); if(g) extra='내 도반: '+g.filter(n=>n!==myName).join(', ') }
+  if(ev==='gongyang'&&S.gifts&&S.gifts.length) extra='공양 받은 사람: '+S.gifts.join(', ');
+  banner(ev,extra);
+  if(ev==='sari'){ sparks(40); flash('goldflash'); tok(1200,.3,.3) }
+  if(ev==='raid'){ flash('redflash'); shake(3); boom() }
+  if(ev==='malbeop'){ document.body.classList.add('mal'); boom() }
+  if(ev==='doban'){ flash('skyflash'); tok(660,.2,.3); setTimeout(()=>tok(880,.2,.3),180) }
+  if(ev==='gongyang'){ petals(50); tok(990,.4,.25) }
+  if(ev==='mara'){ bolt(); shake(4); boom() }
+  if(ev==='final'){ sparks(50); flash('goldflash'); boom() }
+}
+function applyFx(){
+  const fx=Array.isArray(S.fx)?S.fx:[];
+  if(isHost){ fx.slice(0,4).forEach((f,i)=>setTimeout(()=>toast(f[1]==='M'?`${f[0]}님 자비 발동`:`${f[2]} → ${f[0]} · ${ITEM[f[1]]?.n||''}`),i*700)); if(fx.some(f=>f[1]==='T')){shake(2);tok()} return }
+  for(const f of fx){
+    if(f[0]!==myName) continue;
+    if(f[1]==='T'){ shake(7); tok(); setTimeout(tok,300); const d=document.createElement('div'); d.className='tok'; d.textContent='똑!'; addFx(d,2100); toast(`${f[2]}님이 목탁을 던졌다!`) }
+    if(f[1]==='S'){ smokeUntil=Date.now()+3000; hideIdx=[S.q%4,(S.q+2)%4]; toast(`${f[2]}님이 번뇌 연기를 뿌렸다!`); setTimeout(render,3050) }
+    if(f[1]==='M'){ const g=document.createElement('div'); g.className='glow'; addFx(g,2600); toast('자비 발동! 다음 실수 한 번을 막아준다') }
+  }
+}
+function resultFx(){
+  if(isHost) return;
+  const r=myRow(); if(!r) return;
+  if(r.ok===1){ flash('okflash'); tok(1100,.15,.3) } else { flash('badflash'); shake(1) }
+}
+function endFx(){ petals(70); sparks(40); boom() }
+
+/* ---------- client state ---------- */
+function onState(s){
+  if(!s||typeof s.phase!=='string') return;
+  if(Array.isArray(s.qs)&&Array.isArray(s.pm)&&s.qs.length===NQ&&s.qs.every(i=>Number.isInteger(i)&&BANK[i])){ const k=s.qs.join(','); if(k!==lastQs){ lastQs=k; buildQ(s.qs,s.pm) } } else if(s.phase!=='lobby'&&!Q.length) return;
+  S=s; deadline=Date.now()+(+s.rem||0);
+  const key=s.sid+':'+s.phase+':'+s.q;
+  if(key!==lastKey){ lastKey=key; enterPhase() }
+  render();
+}
+function onBoard(b){ if(!b||!Array.isArray(b.p)) return; if(S.phase!=='reveal'){ rankBefore={}; ranked(B.p).forEach(r=>rankBefore[r.name]=r.rank) } B=b; render() }
+function enterPhase(){
+  const ev=EV[S.q]; animateNext=true; lastSec=-1; document.body.classList.remove('panic');
+  if(S.phase==='wait'||S.phase==='lobby'||S.phase==='end') document.body.classList.remove('mal');
+  if(S.phase==='wait'){ myUse=null; picking=false; myAns=null; smokeUntil=0; if(EV[S.q]) tok(500,.2,.2) }
+  if(S.phase==='intro'&&ev) eventFx(ev);
+  if(S.phase==='q'){ myAns=null; if(ev==='malbeop') document.body.classList.add('mal'); applyFx() }
+  if(S.phase==='reveal') resultFx();
+  if(S.phase==='end') endFx();
+}
+
+/* ---------- player actions ---------- */
+function answer(c){
+  if(S.phase!=='q'||myAns!==null) return;
+  myAns=c; const ms=Math.max(0,Math.min(QT,Date.now()-(deadline-QT)));
+  pres({ans:{q:S.q,c,ms}});
+  tok(700,.08,.2); render();
+}
+function setUse(item,target){
+  myUse={item,target};
+  pres({use:{q:S.q,item,target}});
+  render();
+}
+function pickItem(it){
+  if(S.phase!=='wait'||myUse) return;
+  if(it==='M'){ setUse('M',null); return }
+  picking=true; setUse(it,null);
+}
+function pickTarget(n){ if(!myUse||S.phase!=='wait') return; picking=false; setUse(myUse.item,n) }
+
+/* ---------- views ---------- */
+function optButtons(clickable){
+  const q=Q[S.q]; let order=[0,1,2,3];
+  if(!isHost && S.shuf && S.shuf===myName) order=[2,0,3,1];
+  const veil=!isHost && Date.now()<smokeUntil;
+  const reveal=S.phase==='reveal';
+  return `<div class="opts">${order.map((oi,pos)=>{
+    let cls=`opt o${oi}`;
+    if(!isHost&&myAns!==null&&myAns===oi) cls+=' pick';
+    if(!isHost&&myAns!==null&&myAns!==oi&&!reveal) cls+=' dim';
+    if(reveal) cls+= oi===q.a?' right':' dim';
+    if(veil&&hideIdx.includes(pos)&&!reveal) cls+=' veil';
+    return `<button class="${cls}" ${clickable?`data-ans="${oi}"`:''} ${clickable&&myAns===null?'':'aria-disabled="true"'}><b>${LET[oi]}</b><span>${esc(q.o[oi])}</span></button>`;
+  }).join('')}</div>`;
+}
+function boardHtml(limit,two){
+  const list=ranked(B.p); const rows=limit?list.slice(0,limit):list;
+  if(!rows.length) return '<p class="mute">아직 아무도 없어요.</p>';
+  const mv=r=>{ if(S.phase!=='reveal'||!rankBefore[r.name]) return ''; const d=rankBefore[r.name]-r.rank; return d>0?`<span class="mv u">▲${d}</span>`:d<0?`<span class="mv dn">▼${-d}</span>`:'' };
+  return `<div class="board${two?' two':''}">${rows.map(r=>`<div class="brow${r.name===myName?' me':''}"><span class="rk num">${r.rank}</span><span class="nm">${esc(r.name)}${mv(r)}${r.mercy?'<span class="tag">자비</span>':''}${r.inv?`<span class="tag">${r.inv.length}템</span>`:''}</span><span class="d num ${r.delta>0?'up':'no'}">${S.phase==='reveal'&&r.delta?(r.delta>0?'+':'')+r.delta:''}</span><span class="num">${r.score.toLocaleString()}</span></div>`).join('')}</div>`;
+}
+function myRankPanel(){
+  const list=ranked(B.p), i=list.findIndex(r=>r.name===myName); if(i<0) return '';
+  const r=list[i], above=list.slice(0,i).reverse().find(x=>x.score>r.score), below=list.slice(i+1).find(x=>x.score<r.score);
+  const gapUp=above?`<span>${esc(above.name)}님까지 <b class="num">${(above.score-r.score).toLocaleString()}</b>점</span>`:'<span>내가 지금 1등!</span>';
+  const gapDn=below?`<span class="mute">뒤따라오는 ${esc(below.name)}님과 <b class="num">${(r.score-below.score).toLocaleString()}</b>점 차이</span>`:'';
+  return `<div class="panel" style="flex-direction:row;flex-wrap:wrap;align-items:center;gap:18px"><span class="big num" style="font-size:64px">${r.rank}<small style="font-size:24px">위</small></span><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="eyebrow">내 순위 · ${list.length}명 중</span><span class="num" style="font-size:22px">${r.score.toLocaleString()}점</span>${gapUp}${gapDn}</div></div>`;
+}
+function specialNotes(){
+  const ev=EV[S.q], out=[];
+  if(ev==='raid'&&S.shuf) out.push(`<div class="note red">번뇌의 습격 · ${esc(S.shuf)}님의 보기가 뒤섞였다${S.shuf===myName?' (나야!)':''}</div>`);
+  if(ev==='malbeop') out.push(`<div class="note storm">말법시대 · 맞히면 +${S.mal||0}, 틀리면 −${S.mal||0}</div>`);
+  if(ev==='doban'&&S.pairs){ if(myName){ const g=S.pairs.find(g=>g.includes(myName)); if(g) out.push(`<div class="note sky">도반 · ${esc(g.filter(n=>n!==myName).join(', '))}님과 둘 다 맞혀야 점수</div>`) } else out.push(`<div class="note sky">도반 문제 · ${S.pairs.length}개 짝이 함께 도전 중</div>`) }
+  if(ev==='mara'&&S.mara) out.push(`<div class="note storm">마구니 · ${esc(S.mara)}${S.mara===myName?' (나야! 맞히면 모두의 점수를 빼앗는다)':' · 마구니가 틀리면 나머지 전원 +300'}</div>`);
+  if(ev==='sari') out.push(`<div class="note gold">사리 문제 · 맞히면 아이템 2개</div>`);
+  if(ev==='final') out.push(`<div class="note gold">마지막 문제 · 점수 2배</div>`);
+  return out.join('');
+}
+function qHeader(){ return `<div class="top"><span class="qno num">제 ${S.q+1} 문 <span class="mute">/ ${NQ}</span></span><span class="mute num" id="sec">${secLeft()}초</span></div>` }
+
+function viewPlayer(){
+  const me=myRow();
+  const meLine=me?`<span class="row" style="gap:10px">${me.streak>=2?`<span class="streak">${me.streak}연속!</span>`:''}<span class="mute num">${me.rank}위 · ${me.score.toLocaleString()}점</span></span>`:'';
+  if(!hasRoom&&!practice){ const m={connecting:['연결하는 중…','잠깐만 기다려 주세요.'],nohost:[`${roomCode} 방을 찾는 중…`,'방 코드가 맞는지, 교실 화면이 켜져 있는지 확인해 주세요. 계속 다시 시도하고 있어요.'],lost:['연결이 끊겼어요','다시 연결하는 중이에요. 같은 이름으로 돌아가면 점수가 이어져요.'],error:['연결이 잘 안 돼요','와이파이를 확인해 주세요. 계속 다시 시도하고 있어요.'],nolib:['연결 도구를 불러오지 못했어요','인터넷 연결을 확인하고 새로고침해 주세요.']}[netStatus]||['연결하는 중…','']; return `<div class="panel"><h2>${esc(m[0])}</h2><p class="mute">${esc(m[1])}</p></div>` }
+  switch(S.phase){
+   case 'lobby': return `<div class="panel"><span class="eyebrow">대기실</span><h2>${esc(myName)}님, 입장 완료</h2><p class="mute">방장이 시작하면 모두에게 같은 문제가 동시에 나와요. 화면을 켜 두세요.</p></div>
+     <div class="panel"><span class="eyebrow num">들어온 사람 ${B.p.length}명</span><div class="chips">${chipList(true)}</div></div>`;
+   case 'wait': {
+     const inv=(me&&me.inv)||'';
+     const others=B.p.map(r=>r[0]).filter(n=>n!==myName);
+     let itemsHtml = inv?`<div class="items">${[...inv].map(it=>`<button class="item ${it}${myUse&&myUse.item===it?' on':''}" data-item="${it}" ${myUse?'disabled':''}><i>${ITEM[it].g}</i><span>${ITEM[it].n}<br><small class="mute">${ITEM[it].d}</small></span></button>`).join('')}</div>`:'<p class="mute">아이템이 없어요. 하위권은 2연속, 나머지는 3연속 정답이면 하나 생겨요.</p>';
+     let target='';
+     if(myUse&&myUse.item!=='M'){
+       target = myUse.target ? `<div class="note gold">${ITEM[myUse.item].n} → ${esc(myUse.target)} 예약 완료</div>` :
+        `<div class="panel"><span class="eyebrow">누구에게 쓸까? 안 고르면 아무에게나 날아가요</span><div class="chips">${others.map(n=>`<button class="chip" data-target="${esc(n)}">${esc(n)}</button>`).join('')}</div></div>`;
+     } else if(myUse) target=`<div class="note gold">자비 사용 예약 완료</div>`;
+     return `<div class="top"><span class="qno">제 ${S.q+1} 문 준비</span>${meLine}</div>
+      <div class="panel" style="align-items:center;text-align:center"><span class="big num" id="sec2">${secLeft()}</span><p>${EV[S.q]?'⚠ 다음 문제에 무언가 일어날 것 같다…':'아이템을 쓰려면 지금!'}</p></div>
+      <div class="panel"><span class="eyebrow">내 아이템</span>${itemsHtml}${me&&me.mercy?'<div class="note gold">자비가 나를 지키고 있다</div>':''}</div>${target}${S.q>0?myRankPanel()+`<div class="panel"><span class="eyebrow num">전체 순위 · ${B.p.length}명</span><div style="max-height:55vh;overflow-y:auto">${boardHtml(0,true)}</div></div>`:''}`;
+   }
+   case 'intro': return `<div class="panel" style="text-align:center"><h2>무언가 일어난다…</h2></div>`;
+   case 'q': return `${qHeader()}<div class="timer" id="tmr"><i id="bar"></i></div><div class="qgrid"><div class="qside"><div class="qtext">${esc(Q[S.q].t)}</div>${specialNotes()}${myAns!==null?'<p class="mute">답을 냈어요. 결과를 기다리는 중…</p>':''}</div>${optButtons(true)}</div>`;
+   case 'reveal': {
+     const ok=me&&me.ok===1;
+     const msgs=(S.msgs||[]).map(m=>`<div class="note">${esc(m)}</div>`).join('');
+     return `${qHeader()}<div class="panel" style="align-items:center;text-align:center"><span class="result ${ok?'ok':'bad'}">${ok?'정답!':(me&&me.ok===-1?'시간 초과':'오답')}</span><span class="num" style="font-size:28px" id="cnt" data-to="${me?me.delta:0}">${me?(me.delta>0?'+':'')+me.delta+'점':''}</span>${meLine}</div>
+       <div class="panel"><span class="eyebrow">정답</span>${optButtons(false)}</div>${msgs}${myRankPanel()}<div class="panel"><span class="eyebrow num">전체 순위 · ${B.p.length}명</span><div style="max-height:55vh;overflow-y:auto">${boardHtml(0,true)}</div></div>`;
+   }
+   case 'end': {
+     const list=ranked(B.p); const r=list.find(x=>x.name===myName);
+     const t=r?titleFor(r,list):'인간';
+     return `${practice?'<div class="row" style="justify-content:center"><button class="btn" data-p="again">모의전 다시 하기</button><button class="btn ghost" data-p="quit">그만하기</button></div>':''}<div class="panel" style="align-items:center;text-align:center"><span class="eyebrow">환생 결과</span><span class="title-big">${t}</span><p>${TSUB[t]}</p>${r?`<span class="mute num">${r.rank}위 · ${r.score.toLocaleString()}점</span>`:''}</div><div class="panel"><span class="eyebrow">최종 순위</span>${boardHtml(10)}</div>`;
+   }
+  }
+  return '';
+}
+
+function viewHost(){
+  const bar=`<div class="hostbar">${S.phase!=='lobby'&&S.phase!=='end'?'<button class="btn ghost" data-h="skip">다음 단계로</button>':''}${S.phase!=='lobby'?'<button class="btn ghost" data-h="reset">대기실로</button>':''}</div>`;
+  const conn = hasRoom?`<div class="panel" style="align-items:center;text-align:center"><span class="eyebrow">방 코드</span><span class="big" style="letter-spacing:.18em">${esc(roomCode)}</span><div id="qr" style="background:#fff;padding:10px;border-radius:12px;line-height:0"></div><p class="mute" style="word-break:break-all">${esc(joinUrl())}</p></div>`:(hostErr?`<div class="note red">연결 서버에 접속하지 못했어요 (${esc(hostErr)}). 와이파이를 확인하고 새로고침해 주세요. 봇으로 흐름 확인은 할 수 있어요.</div>`:(window.Peer?'<div class="note">방 만드는 중…</div>':'<div class="note red">연결 도구를 불러오지 못해 혼자 테스트 모드로 동작해요.</div>'));
+  switch(S.phase){
+   case 'lobby': {
+     const n=B.p.length;
+     return `<div class="panel"><span class="eyebrow">방장 화면 · 교실 TV에 띄워 두세요</span><h1>스피드 불교 퀴즈</h1><p class="mute">친구들은 이 사이트에 들어와 방 코드와 이름을 쓰거나, QR을 찍으면 바로 입장해요. 문제 은행 ${BANK.length}개 중 매판 15문제 랜덤, 문제마다 8초 아이템 시간이 먼저 나오고 7번의 이벤트가 판을 흔들어요.</p>${conn}
+      <div class="row"><button class="btn" data-h="start" ${n<1?'disabled':''}>시작 (${n}명)</button><button class="btn ghost" data-h="bots">테스트 봇 3명 추가</button><button class="btn ghost" data-p="practice">내가 참가자로 모의전</button>${H.bots.length?'<button class="btn ghost" data-h="nobots">봇 빼기</button>':''}</div></div>
+      <div class="panel"><span class="eyebrow num">입장 ${n}명</span><div class="chips">${chipList(false)||'<span class="mute">아직 아무도 없어요</span>'}</div></div>
+      <div class="panel"><span class="eyebrow">규칙 한눈에</span><p>빨리 맞힐수록 최대 1,000점 · 오답 감점 없음 · 하위권은 2연속, 나머지는 3연속 정답이면 아이템</p><p class="mute">목탁(흔들기) · 번뇌 연기(보기 가리기) · 자비(실수 한 번 막기) / 3번 사리 · 5번 번뇌의 습격 · 7번 말법시대 · 9번 도반 · 11번 공양 · 13번 마구니 · 15번 2배</p></div>`;
+   }
+   case 'wait': return `${bar}<div class="top"><span class="qno">제 ${S.q+1} 문 준비</span><span class="mute">아이템 사용 시간</span></div><div class="panel" style="align-items:center;text-align:center"><span class="big num" id="sec2">${secLeft()}</span><p>${EV[S.q]?'⚠ 다음 문제에 무언가 일어난다…':'지금 아이템을 쓰세요!'}</p></div><div class="panel"><span class="eyebrow">현재 순위</span>${boardHtml(10,true)}</div>`;
+   case 'intro': return `${bar}<div class="panel" style="text-align:center"><h2>이벤트 발동!</h2></div>`;
+   case 'q': return `${bar}${qHeader()}<div class="timer" id="tmr"><i id="bar"></i></div><div class="qgrid"><div class="qside"><div class="qtext">${esc(Q[S.q].t)}</div>${specialNotes()}<p class="mute num" style="font-size:20px">답한 사람 ${answeredCount()} / ${B.p.length}</p></div>${optButtons(false)}</div>`;
+   case 'reveal': return `${bar}${qHeader()}${optButtons(false)}${(S.msgs||[]).map(m=>`<div class="note">${esc(m)}</div>`).join('')}<div class="panel"><span class="eyebrow">순위</span>${boardHtml(12,true)}</div>`;
+   case 'end': {
+     const list=ranked(B.p); const top=list.slice(0,3);
+     const pod=(r,cls)=>r?`<div class="pod ${cls}"><span class="t">${titleFor(r,list)}</span><span class="nm">${esc(r.name)}</span><span class="mute num">${r.score.toLocaleString()}</span></div>`:'<div></div>';
+     return `${bar}<div style="text-align:center"><span class="eyebrow">환생 결과 발표</span><h1>윤회가 끝났다</h1></div><div class="podium">${pod(top[1],'p2')}${pod(top[0],'p1')}${pod(top[2],'p3')}</div>
+       <div class="panel"><span class="eyebrow">전체 결과</span><div class="board two">${list.map(r=>`<div class="brow"><span class="rk num">${r.rank}</span><span class="nm">${esc(r.name)}</span><span class="d no">${titleFor(r,list)}</span><span class="num">${r.score.toLocaleString()}</span></div>`).join('')}</div></div>
+       <div class="row" style="justify-content:center"><button class="btn" data-h="again">같은 사람들로 다시 하기</button></div>`;
+   }
+  }
+  return '';
+}
+function render(){
+  const app=$('#app');
+  if(!isHost && !myName){ $('#join').hidden=false; app.hidden=true; return }
+  $('#join').hidden=true; app.hidden=false;
+  let html=isHost?viewHost():viewPlayer();
+  if(!isHost&&S.phase!=='q') html=`<div class="narrow">${html}</div>`;
+  app.classList.toggle('anim',animateNext); animateNext=false;
+  app.innerHTML=html;
+  const c=$('#cnt'); if(c&&app.classList.contains('anim')) countUp(c);
+  const qr=$('#qr'); if(qr&&window.QRCode){ try{ new QRCode(qr,{text:joinUrl(),width:170,height:170}) }catch(e){} }
+}
+function chipList(markMe){ return B.p.map(r=>{ const n=r[0], isNew=!seenNames.has(n); seenNames.add(n); if(isNew){ tok(1000+rand(400),.08,.15) } return `<span class="chip${markMe&&n===myName?' me':''}${isNew?' new':''}">${esc(n)}</span>` }).join('') }
+function countUp(el){ const to=+el.dataset.to||0; if(!to) return; const t0=performance.now(), dur=900;
+  (function f(t){ const k=Math.min(1,(t-t0)/dur), v=Math.round(to*(1-Math.pow(1-k,3))); el.textContent=(v>0?'+':'')+v+'점'; if(k<1) requestAnimationFrame(f) })(t0) }
+document.addEventListener('click',e=>{
+  const a=e.target.closest('[data-ans]'); if(a){ const was=myAns; answer(+a.dataset.ans); if(was===null&&myAns!==null){ const r=document.createElement('div'); r.className='ripple'; r.style.left=e.clientX+'px'; r.style.top=e.clientY+'px'; addFx(r,700); const st=document.createElement('div'); st.className='stampOk'; st.textContent='제출!'; addFx(st,1400) } return }
+  const it=e.target.closest('[data-item]'); if(it){ pickItem(it.dataset.item); return }
+  const tg=e.target.closest('[data-target]'); if(tg){ pickTarget(tg.dataset.target); return }
+  const pp=e.target.closest('[data-p]'); if(pp){ audio(); if(pp.dataset.p==='practice') startPractice(); if(pp.dataset.p==='host') startHost(); if(pp.dataset.p==='again') hostCmd('again'); if(pp.dataset.p==='quit') location.reload(); return }
+  const h=e.target.closest('[data-h]'); if(h&&isHost){ audio(); hostCmd(h.dataset.h) }
+});
+(function loop(){
+  const bar=$('#bar'); if(bar&&S.phase==='q'){ bar.style.transform=`scaleX(${Math.max(0,(deadline-Date.now())/QT)})` }
+  const sec=secLeft(), live=(S.phase==='q'||S.phase==='wait');
+  const hurry=live&&sec<=3&&deadline>Date.now();
+  const s=$('#sec'); if(s){ s.textContent=sec+'초'; s.classList.toggle('hurry',S.phase==='q'&&hurry) }
+  const tm=$('#tmr'); if(tm) tm.classList.toggle('hurry',hurry);
+  const s2=$('#sec2'); if(s2){ if(s2.textContent!==String(sec)){ s2.textContent=sec; s2.classList.remove('beat'); void s2.offsetWidth; s2.classList.add('beat') } s2.classList.toggle('hurry',hurry) }
+  document.body.classList.toggle('panic',S.phase==='q'&&hurry&&(isHost||myAns===null));
+  if(live&&sec!==lastSec){ lastSec=sec; if(hurry&&sec>0) tok(sec===1?1500:1250,.07,.25); else if(S.phase==='wait'&&sec>0) tok(600,.05,.08) }
+  requestAnimationFrame(loop);
+})();
+
+/* ---------- join ---------- */
+$('#joinForm').addEventListener('submit',e=>{
+  e.preventDefault(); audio();
+  const n=clean($('#nameInput').value);
+  if(!n){ $('#joinErr').textContent='이름을 한 글자 이상 적어 주세요.'; return }
+  const code=String($('#codeInput').value||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(code.length!==4){ $('#joinErr').textContent='방 코드 4자리를 적어 주세요.'; return }
+  $('#joinErr').textContent=''; dupFlag=false;
+  myName=n; lsSet('bq-name',n); roomCode=code; localPres={role:'p',name:n,ans:null,use:null};
+  joinRoom();
+  try{ navigator.wakeLock&&navigator.wakeLock.request('screen').catch(()=>{}) }catch(e){}
+  render();
+});
+
+function joinUrl(){ return location.origin+location.pathname+'?code='+roomCode }
+function genCode(){ const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let c=''; for(let i=0;i<4;i++) c+=A[rand(A.length)]; return c }
+/* player side */
+function joinRoom(){
+  if(!window.Peer){ netStatus='nolib'; render(); return }
+  if(dupFlag) return;
+  if(!hasRoom&&netStatus!=='nohost') netStatus=netStatus||'connecting';
+  render();
+  if(!peer||peer.destroyed){
+    peer=new Peer();
+    peer.on('open',openConn);
+    peer.on('disconnected',()=>{ try{ peer.reconnect() }catch(e){} });
+    peer.on('error',e=>{ if(dupFlag) return; netStatus=(e&&e.type==='peer-unavailable')?'nohost':'error'; if(e&&(e.type==='network'||e.type==='server-error'||e.type==='socket-error')){ try{peer.destroy()}catch(x){} peer=null } render(); schedule(joinRoom,3000) });
+  } else if(peer.open) openConn();
+}
+function openConn(){
+  if(conn&&conn.open) return;
+  try{ conn&&conn.close() }catch(e){}
+  const c=peer.connect('bq-'+roomCode,{reliable:true}); conn=c;
+  const giveUp=setTimeout(()=>{ if(!c.open&&!dupFlag){ netStatus=netStatus==='connecting'?'nohost':netStatus; render(); schedule(joinRoom,1500) } },6000);
+  c.on('open',()=>{ clearTimeout(giveUp); hasRoom=true; netStatus='ok'; sendP(); try{ navigator.wakeLock&&navigator.wakeLock.request('screen').catch(()=>{}) }catch(e){} render() });
+  c.on('data',d=>{ if(!d||typeof d!=='object') return; if(d.t==='st') onState(d.d); else if(d.t==='bd') onBoard(d.d); else if(d.t==='dup') dupName() });
+  c.on('close',()=>{ if(c!==conn||dupFlag) return; hasRoom=false; netStatus='lost'; render(); schedule(joinRoom,2000) });
+  c.on('error',()=>{});
+}
+function dupName(){ dupFlag=true; hasRoom=false; try{ conn.close() }catch(e){} myName=null; render(); $('#joinErr').textContent='같은 이름이 이미 접속해 있어요. 다른 이름을 써 주세요.' }
+/* host side */
+function startHost(code,tries=0){
+  isHost=true; myName=null; practice=false;
+  if(!window.__htick){ window.__htick=setInterval(()=>{ if(isHost) hostTick() },500) }
+  bcast();
+  if(!window.Peer){ return }
+  roomCode=code||lsGet('bq-host')||genCode();
+  const p=new Peer('bq-'+roomCode); peer=p;
+  p.on('open',()=>{ hasRoom=true; hostErr=''; lsSet('bq-host',roomCode); bcast() });
+  p.on('disconnected',()=>{ try{ p.reconnect() }catch(e){} });
+  p.on('error',e=>{ const t=e&&e.type;
+    if(t==='unavailable-id'){ try{p.destroy()}catch(x){} if(tries<3&&!code) setTimeout(()=>startHost(roomCode,tries+1),3000); else startHost(genCode(),0); return }
+    if(t==='peer-unavailable') return;
+    hostErr=t||'unknown'; render() });
+  p.on('connection',c=>{
+    conns.set(c.peer,c);
+    c.on('open',()=>{ try{ const s=Object.assign({},H.S,{rem:Math.max(0,H.deadline-Date.now())}); c.send({t:'bd',d:boardData()}); c.send({t:'st',d:s}) }catch(e){} });
+    c.on('data',d=>hostData(c,d));
+    c.on('close',()=>{ if(conns.get(c.peer)===c){ conns.delete(c.peer); pmap.delete(c.peer) } hostPeers({}) });
+    c.on('error',()=>{});
+  });
+}
+function hostData(c,d){
+  if(!d||d.t!=='p'||!d.p||typeof d.p!=='object') return;
+  const n=clean(d.p.name); if(!n) return;
+  for(const [pid,pr] of pmap){ if(pid!==c.peer&&pr.name===n&&conns.get(pid)&&conns.get(pid).open){ try{ c.send({t:'dup'}) }catch(e){} return } }
+  const isNew=!pmap.has(c.peer);
+  const ans=d.p.ans&&typeof d.p.ans==='object'?{q:+d.p.ans.q,c:+d.p.ans.c,ms:+d.p.ans.ms}:null;
+  const use=d.p.use&&typeof d.p.use==='object'?{q:+d.p.use.q,item:String(d.p.use.item||''),target:d.p.use.target==null?null:String(d.p.use.target)}:null;
+  pmap.set(c.peer,{role:'p',name:n,ans,use});
+  hostPeers({joined:isNew?[1]:[]});
+}
+function startPractice(){
+  const n=clean($('#nameInput').value)||clean(lsGet('bq-name'))||'나';
+  practice=true; isHost=false; myName=n; localPres={role:'p',name:n};
+  clearTimeout(H.timer); H.bots=BOTN.slice(0,5); H.players={}; H.bots.forEach(b=>H.players[b]=newP()); H.players[n]=newP();
+  seenNames=new Set(); if(!window.__ptick){ window.__ptick=setInterval(()=>{ if(practice) hostTick() },500) }
+  hostCmd('start');
+}
+/* ---------- host engine ---------- */
+let H={players:{},bots:[],S:{phase:'lobby',q:-1,sid:0},deadline:0,timer:null,botAns:{},ending:false};
+const BOTN=['봇 연꽃','봇 동자','봇 목어','봇 풍경','봇 범종','봇 연등'];
+function newP(){ return {score:0,streak:0,inv:[],delta:0,ok:-1,mercy:false} }
+function liveMap(){ const m={}; if(practice){ const n=clean(localPres.name); if(localPres.role==='p'&&n) m[n]=localPres; return m } for(const pr of pmap.values()){ if(pr.role==='p'&&pr.name&&!m[pr.name]) m[pr.name]=pr } return m }
+function hostRank(){ return Object.keys(H.players).map(n=>({name:n,score:H.players[n].score})).sort((a,b)=>b.score-a.score) }
+function syncLobby(){ const live=liveMap(); const keep={}; for(const n in live) keep[n]=H.players[n]||newP(); for(const b of H.bots) keep[b]=H.players[b]||newP(); H.players=keep }
+function boardData(){ return {p:Object.keys(H.players).map(n=>{const p=H.players[n]; return [n,p.score,p.streak,p.inv.join(''),p.delta,p.ok,p.mercy?1:0]}).sort((a,b)=>b[1]-a[1])} }
+function bcast(){
+  const s=Object.assign({},H.S,{rem:Math.max(0,H.deadline-Date.now())}); const b=boardData();
+  onBoard(b); onState(s);
+  if(isHost&&!practice){ for(const c of conns.values()){ if(c.open){ try{ c.send({t:'bd',d:b}); c.send({t:'st',d:s}) }catch(e){} } } }
+}
+function setPhase(phase,ms,extra){
+  H.S=Object.assign({},H.S,{phase},extra||{}); H.deadline=Date.now()+ms; H.ending=false;
+  clearTimeout(H.timer); if(ms) H.timer=setTimeout(advance,ms);
+  bcast();
+}
+function hostCmd(c){
+  if(c==='start'||c==='again'){ for(const n in H.players) H.players[n]=newP(); H.S.sid=(H.S.sid||0)+1; Object.assign(H.S,newSet()); goWait(0) }
+  if(c==='bots'){ const add=BOTN.filter(b=>!H.bots.includes(b)).slice(0,3); H.bots.push(...add); add.forEach(b=>H.players[b]=newP()); bcast() }
+  if(c==='nobots'){ H.bots.forEach(b=>delete H.players[b]); H.bots=[]; bcast() }
+  if(c==='skip'){ clearTimeout(H.timer); advance() }
+  if(c==='asplayer'){ location.hash='player' }
+  if(c==='reset'){ clearTimeout(H.timer); syncLobby(); for(const n in H.players) H.players[n]=newP(); setPhase('lobby',0,{q:-1,fx:[],msgs:[]}) }
+}
+function goWait(q){ setPhase('wait',WAIT,{q,fx:[],msgs:[],shuf:null,pairs:null,gifts:null,mara:null,mal:0}) }
+function give(p){ if(p.inv.length<3) p.inv.push('TSM'[rand(3)]) }
+function advance(){
+  const q=H.S.q, ev=EV[q];
+  if(H.S.phase==='wait'){ processItems(q); if(ev){ prepEvent(q); setPhase('intro',INTRO) } else goQ(q); return }
+  if(H.S.phase==='intro'){ goQ(q); return }
+  if(H.S.phase==='q'){ score(q); setPhase('reveal',REV); return }
+  if(H.S.phase==='reveal'){ if(q+1<NQ) goWait(q+1); else setPhase('end',0); return }
+}
+function goQ(q){
+  H.botAns={}; const a=Q[q].a;
+  H.bots.forEach(b=>{ H.botAns[b]={c:Math.random()<.62?a:rand(4),ms:1000+rand(6500)} });
+  setPhase('q',QT);
+}
+function processItems(q){
+  const live=liveMap(), names=Object.keys(H.players), fx=[], uses=[];
+  for(const n in live){ const u=live[n].use; if(u&&u.q===q&&typeof u.item==='string') uses.push([n,u.item,u.target]) }
+  for(const b of H.bots){ const p=H.players[b]; if(p&&p.inv.length&&Math.random()<.6) uses.push([b,p.inv[0],null]) }
+  for(const [n,it,tg] of uses){
+    const p=H.players[n]; if(!p||!ITEM[it]) continue;
+    const i=p.inv.indexOf(it); if(i<0) continue; p.inv.splice(i,1);
+    if(it==='M'){ p.mercy=true; fx.push([n,'M',n]); continue }
+    let t=(typeof tg==='string'&&H.players[clean(tg)]&&clean(tg)!==n)?clean(tg):null;
+    if(!t){ const o=names.filter(x=>x!==n); if(!o.length) continue; t=o[rand(o.length)] }
+    fx.push([t,it,n]);
+  }
+  H.S.fx=fx.slice(0,60);
+}
+function prepEvent(q){
+  const ev=EV[q], rk=hostRank(), names=rk.map(r=>r.name);
+  if(ev==='raid') H.S.shuf=names[0]||null;
+  if(ev==='malbeop'){ const avg=names.length?rk.reduce((s,r)=>s+r.score,0)/names.length:0; H.S.mal=Math.round(avg*.2) }
+  if(ev==='doban'){ const sh=shuffleArr(names), g=[]; for(let i=0;i<sh.length;i+=2) g.push(sh.slice(i,i+2)); if(g.length>1&&g[g.length-1].length===1) g[g.length-2].push(g.pop()[0]); H.S.pairs=g }
+  if(ev==='gongyang'){ const low=names.slice(-3).reverse(); low.forEach(n=>give(H.players[n])); H.S.gifts=low }
+  if(ev==='mara'){ const pool=names.slice(0,Math.max(1,Math.ceil(names.length/2))); H.S.mara=pool.length?pool[rand(pool.length)]:null }
+}
+function getAns(n,q,live){ if(H.bots.includes(n)){ const b=H.botAns[n]; return b&&b.ms<=QT?b:null } const pr=live[n]; return pr&&pr.ans&&pr.ans.q===q?pr.ans:null }
+function score(q){
+  const a=Q[q].a, ev=EV[q], live=liveMap(), names=Object.keys(H.players), msgs=[];
+  const before={}; names.forEach(n=>before[n]=H.players[n].score);
+  const rk=hostRank(); const lower=new Set(rk.slice(Math.ceil(rk.length/2)).map(r=>r.name));
+  const res={};
+  for(const n of names){ const ans=getAns(n,q,live); const ok=ans?(ans.c===a?1:0):-1; let pts=ok===1?Math.round(400+600*Math.max(0,1-(+ans.ms||0)/QT)):0; if(ev==='final') pts*=2; res[n]={ok,pts} }
+  if(ev==='doban'&&H.S.pairs){ for(const g of H.S.pairs){ if(g.every(n=>res[n]&&res[n].ok===1)) msgs.push(g.join(' · ')+' 도반 성공!'); else g.forEach(n=>{ if(res[n]) res[n].pts=0 }) } }
+  let saved=0;
+  for(const n of names){ const p=H.players[n], r=res[n]; p.score+=r.pts; if(r.ok!==1&&ev!=='malbeop'&&p.mercy){ p.mercy=false; p.score+=300; saved++ } }
+  if(ev==='malbeop'){ const amt=H.S.mal||0; for(const n of names){ const p=H.players[n]; if(res[n].ok===1) p.score+=amt; else if(p.mercy){ p.mercy=false; saved++ } else p.score=Math.max(0,p.score-amt) } msgs.push(`말법시대 정산: 정답 +${amt}, 오답 −${amt}`) }
+  if(ev==='mara'&&H.S.mara&&H.players[H.S.mara]){
+    const m=H.S.mara, others=names.filter(x=>x!==m);
+    if(res[m].ok===1){ const per=others.length?Math.round(1500/others.length):0; let got=0; others.forEach(n=>{ const p=H.players[n]; if(p.mercy){ p.mercy=false; saved++; return } const take=Math.min(per,p.score); p.score-=take; got+=take }); H.players[m].score+=got; msgs.push(`마구니 ${m} 정답! 모두에게서 ${got}점을 빼앗았다`) }
+    else { others.forEach(n=>H.players[n].score+=300); msgs.push(`마구니 ${m} 오답! 나머지 전원 +300`) }
+  }
+  let gifted=0;
+  for(const n of names){ const p=H.players[n], r=res[n];
+    if(r.ok===1){ p.streak++; if(ev==='sari'){ give(p); give(p); gifted++ } const th=lower.has(n)?2:3; if(p.streak>=th){ give(p); p.streak=0 } } else p.streak=0;
+    p.delta=p.score-before[n]; p.ok=r.ok }
+  if(ev==='sari') msgs.push(`사리를 얻은 사람 ${gifted}명 · 아이템 2개씩`);
+  if(saved) msgs.push(`자비가 ${saved}명을 지켰다`);
+  H.S.msgs=msgs;
+}
+function answeredCount(){
+  if(!isHost&&!practice) return 0; const live=liveMap(); const el=Date.now()-(H.deadline-QT);
+  let c=0; for(const n in H.players){ if(H.bots.includes(n)){ const b=H.botAns[n]; if(b&&b.ms<=el) c++ } else { const pr=live[n]; if(pr&&pr.ans&&pr.ans.q===H.S.q) c++ } }
+  return c;
+}
+let lastB=0;
+function hostTick(){
+  if(H.S.phase==='q'&&!H.ending){ const n=Object.keys(H.players).length; if(n&&answeredCount()>=n){ H.ending=true; clearTimeout(H.timer); H.timer=setTimeout(advance,700) } }
+  if(Date.now()-lastB>2000){ lastB=Date.now(); bcast() } else if(H.S.phase==='q') render();
+}
+function hostPeers(ch){
+  if(H.S.phase==='lobby') syncLobby();
+  else { const live=liveMap(); for(const n in live) if(!H.players[n]) H.players[n]=newP() }
+  if(ch.joined&&ch.joined.length) bcast(); else render();
+}
+
+
+/* ---------- night sky with drifting lanterns ---------- */
+(function sky(){
+  const cv=$('#sky'); if(!cv||!cv.getContext) return;
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const cx=cv.getContext('2d'); let W=0,H2=0,dpr=Math.min(2,window.devicePixelRatio||1);
+  const L=[]; function size(){ W=innerWidth; H2=innerHeight; cv.width=W*dpr; cv.height=H2*dpr; cv.style.width=W+'px'; cv.style.height=H2+'px'; cx.setTransform(dpr,0,0,dpr,0,0) }
+  size(); addEventListener('resize',size);
+  const N=Math.round(Math.min(28,Math.max(12,innerWidth/45)));
+  for(let i=0;i<N;i++) L.push({x:Math.random(),y:Math.random(),r:3+Math.random()*7,v:.00004+Math.random()*.00008,ph:Math.random()*6.28,hue:Math.random()<.7?38:350});
+  let last=performance.now();
+  (function draw(t){
+    const dt=Math.min(50,t-last); last=t; cx.clearRect(0,0,W,H2);
+    const mal=document.body.classList.contains('mal'), hurry=document.body.classList.contains('panic');
+    for(const l of L){
+      l.y-=l.v*dt*(hurry?3:1); l.ph+=dt*.002; if(l.y<-.05){ l.y=1.05; l.x=Math.random() }
+      const x=(l.x+Math.sin(l.ph)*.01)*W, y=l.y*H2, a=mal?.12:.5+.3*Math.sin(l.ph*1.7);
+      const g=cx.createRadialGradient(x,y,0,x,y,l.r*4);
+      g.addColorStop(0,`hsla(${l.hue},90%,70%,${a})`); g.addColorStop(1,`hsla(${l.hue},90%,60%,0)`);
+      cx.fillStyle=g; cx.beginPath(); cx.arc(x,y,l.r*4,0,6.29); cx.fill();
+      cx.fillStyle=`hsla(${l.hue},95%,78%,${a+.2})`; cx.beginPath(); cx.ellipse(x,y,l.r*.7,l.r,0,0,6.29); cx.fill();
+    }
+    requestAnimationFrame(draw);
+  })(last);
+})();
+
+/* ---------- boot ---------- */
+(function boot(){
+  const saved=lsGet('bq-name'); if(saved) $('#nameInput').value=saved;
+  try{ const qc=new URLSearchParams(location.search).get('code'); if(qc) $('#codeInput').value=qc.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4) }catch(e){}
+  render();
+})();
+</script>
+</body>
+</html>
