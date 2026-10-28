@@ -176,10 +176,15 @@ body.panic::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:
 @keyframes ripple{to{width:260px;height:260px;opacity:0}}
 .stampOk{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-10deg);font-family:var(--display);font-size:clamp(50px,14vw,110px);color:var(--paper);border:6px solid var(--paper);border-radius:16px;padding:6px 20px;animation:stampIn .35s cubic-bezier(.2,1.8,.4,1) both,fadeOut .6s .7s forwards}
 @keyframes stampIn{from{transform:translate(-50%,-50%) rotate(-10deg) scale(2.5);opacity:0}}
+.bigshake{animation:bigshake .28s linear 0s 12}
+@keyframes bigshake{0%,100%{transform:translate(0,0) rotate(0)}10%{transform:translate(-30px,12px) rotate(-4deg) scale(1.02)}25%{transform:translate(26px,-16px) rotate(3.5deg)}40%{transform:translate(-22px,-10px) rotate(-3deg) scale(.98)}55%{transform:translate(28px,14px) rotate(4deg)}70%{transform:translate(-18px,18px) rotate(-2.5deg)}85%{transform:translate(16px,-12px) rotate(2deg)}}
+.tokhit{position:absolute;font-family:var(--display);font-size:clamp(60px,16vw,130px);color:#e7b77a;text-shadow:0 6px 0 #6b4320;animation:tokhit .7s cubic-bezier(.2,1.8,.4,1) both;pointer-events:none}
+@keyframes tokhit{0%{transform:translate(-50%,-50%) scale(3) rotate(-15deg);opacity:0}30%{opacity:1}100%{transform:translate(-50%,-50%) scale(1) rotate(var(--r));opacity:0}}
+.hitflash{position:absolute;inset:0;background:#e7b77a;animation:flash .25s ease-out forwards}
 @media (prefers-reduced-motion:reduce){
   .anim *,.timer.hurry,#sec.hurry,body.panic::after,.streak,.opt.right{animation:none!important}
   #sky{display:none}
-  .shake{animation:none} .petal,.spark{display:none} .banner div{animation:none} .bolt,.flash{animation-duration:.01s}
+  .shake,.bigshake{animation:none} .petal,.spark{display:none} .banner div{animation:none} .bolt,.flash{animation-duration:.01s}
 }
 </style>
 </head>
@@ -352,12 +357,20 @@ function eventFx(ev){
   if(ev==='mara'){ bolt(); shake(4); boom() }
   if(ev==='final'){ sparks(50); flash('goldflash'); boom() }
 }
+function mokTak(){
+  const st=$('#stage'); st.classList.remove('shake','bigshake'); void st.offsetWidth; st.classList.add('bigshake'); setTimeout(()=>st.classList.remove('bigshake'),3400);
+  try{ navigator.vibrate&&navigator.vibrate([120,80,120,80,200,100,120,80,200]) }catch(e){}
+  [0,450,900,1500,2100,2700].forEach((t,i)=>setTimeout(()=>{
+    tok(900-i*40,.14,.6); const fl=document.createElement('div'); fl.className='hitflash'; addFx(fl,300);
+    const d=document.createElement('div'); d.className='tokhit'; d.textContent='똑!'; d.style.left=(20+Math.random()*60)+'%'; d.style.top=(20+Math.random()*55)+'%'; d.style.setProperty('--r',(Math.random()*30-15)+'deg'); addFx(d,800);
+  },t));
+}
 function applyFx(){
   const fx=Array.isArray(S.fx)?S.fx:[];
   if(isHost){ fx.slice(0,4).forEach((f,i)=>setTimeout(()=>toast(f[1]==='M'?`${f[0]}님 자비 발동`:`${f[2]} → ${f[0]} · ${ITEM[f[1]]?.n||''}`),i*700)); if(fx.some(f=>f[1]==='T')){shake(2);tok()} return }
   for(const f of fx){
     if(f[0]!==myName) continue;
-    if(f[1]==='T'){ shake(7); tok(); setTimeout(tok,300); const d=document.createElement('div'); d.className='tok'; d.textContent='똑!'; addFx(d,2100); toast(`${f[2]}님이 목탁을 던졌다!`) }
+    if(f[1]==='T'){ mokTak(); toast(`${f[2]}님이 목탁을 던졌다!`) }
     if(f[1]==='S'){ smokeUntil=Date.now()+3000; hideIdx=[S.q%4,(S.q+2)%4]; toast(`${f[2]}님이 번뇌 연기를 뿌렸다!`); setTimeout(render,3050) }
     if(f[1]==='M'){ const g=document.createElement('div'); g.className='glow'; addFx(g,2600); toast('자비 발동! 다음 실수 한 번을 막아준다') }
   }
